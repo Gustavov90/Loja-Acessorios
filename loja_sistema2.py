@@ -10,14 +10,13 @@ from PIL import Image, ImageTk
 class LojaAcessorios:
     def __init__(self):
         self.janela = Tk()
-        self.janela.title("Loja de Acessórios Automotivos")
-        self.janela.geometry("600x600")
+        self.janela.title("GearControl")
+        self.janela.geometry("1000x600")
 
         # Estilo ttk
         style = Style()
-        style.configure('TButton', font=('Arial', 12), padding=2)
+        style.configure('TButton', font=('Arial', 12), padding=5)
         style.configure('TLabel', font=('Arial', 12))
-
 
         self.painel_esquerdo = Frame(self.janela, width=200, bg="lightgray")
         self.painel_esquerdo.pack(side=LEFT, fill=Y)
@@ -25,15 +24,131 @@ class LojaAcessorios:
         self.painel_direita = Frame(self.janela, bg="white")
         self.painel_direita.pack(side=RIGHT, fill=BOTH, expand=True)
 
+        self.criar_tela_login()
+        self.janela.mainloop()
+
+        self.label_usuario = Label(self.janela, text="Usuário: Nenhum", font=('Arial', 12))
+        self.label_usuario.pack(side=BOTTOM, pady=10)
+
+    def criar_tela_login(self):
+        """Cria a tela de login."""
+        self.limpar_painel_direita()
+
+        # Adiciona o logo no painel esquerdo
+        try:
+            logo = Image.open("logo.png")
+            logo = logo.resize((200, 200))
+            logo_tk = ImageTk.PhotoImage(logo)
+
+            logo_label = Label(self.painel_esquerdo, image=logo_tk)
+            logo_label.image = logo_tk
+            logo_label.pack(pady=10)
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao carregar o logo: {e}")
+
+        # Cria os campos de login no painel direito
+        Label(self.painel_direita, text="Login", font=('Arial', 16)).pack(pady=60)
+
+        Label(self.painel_direita, text="Usuário:").pack(pady=5)
+        self.entrada_usuario = Entry(self.painel_direita)
+        self.entrada_usuario.pack(pady=5)
+
+        Label(self.painel_direita, text="Senha:").pack(pady=5)
+        self.entrada_senha = Entry(self.painel_direita, show='*')
+        self.entrada_senha.pack(pady=5)
+
+        Button(self.painel_direita, text="Entrar", command=self.login).pack(pady=10)
+        Button(self.painel_direita, text="Cadastrar", command=self.cadastrar_usuario).pack(pady=5)
+        Button(self.painel_direita, text="Recuperar Usuário/Senha", command=self.recuperar_usuario_senha).pack(pady=5)
+
+    def login(self):
+        """Realiza o login do usuário."""
+        usuario = self.entrada_usuario.get()
+        senha = self.entrada_senha.get()
+
+        with sqlite3.connect("loja_acessorios.db") as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM usuarios WHERE usuario = ? AND senha = ?", (usuario, senha))
+            if cursor.fetchone():
+                messagebox.showinfo("Sucesso", "Login realizado com sucesso!")
+                self.criar_interface_principal()
+            else:
+                messagebox.showerror("Erro", "Usuário ou senha incorretos.")
+
+        self.label_usuario.config(text=f"Usuário: {usuario}")  # Atualiza o label do usuário
+
+    def recuperar_usuario_senha(self):
+        """Recupera o nome de usuário e a senha."""
+        # Solicita ao usuário que insira seu e-mail ou nome de usuário
+        email_usuario = simpledialog.askstring("Recuperação", "Digite seu e-mail ou nome de usuário:")
+
+        if email_usuario:
+            # Aqui você deve implementar a lógica para recuperar a senha
+            # Por exemplo, consultar o banco de dados para verificar se o e-mail/nome de usuário existe
+            try:
+                conn = sqlite3.connect('seu_banco_de_dados.db')
+                cursor = conn.cursor()
+
+                # Consulta para encontrar o usuário
+                cursor.execute("SELECT usuario, senha FROM usuarios WHERE email = ?", (email_usuario,))
+                resultado = cursor.fetchone()
+
+                if resultado:
+                    usuario, senha = resultado
+                    messagebox.showinfo("Recuperação", f"Usuário: {usuario}\nSenha: {senha}")
+                else:
+                    messagebox.showerror("Erro", "Usuário não encontrado.")
+
+                conn.close()
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao acessar o banco de dados: {e}")
+        else:
+            messagebox.showwarning("Atenção", "Você deve inserir um e-mail ou nome de usuário.")
+
+    def cadastrar_usuario(self):
+        """Cadastra um novo usuário."""
+        self.limpar_painel_direita()
+        Label(self.painel_direita, text="Cadastrar Usuário", font=('Arial', 16)).pack(pady=10)
+
+        Label(self.painel_direita, text="Usuário:").pack(pady=5)
+        entrada_usuario = Entry(self.painel_direita)
+        entrada_usuario.pack(pady=5)
+
+        Label(self.painel_direita, text="Senha:").pack(pady=5)
+        entrada_senha = Entry(self.painel_direita, show='*')
+        entrada_senha.pack(pady=5)
+
+        Button(self.painel_direita, text="Cadastrar", command=lambda: self.salvar_usuario(entrada_usuario, entrada_senha)).pack(pady=10)
+
+    def salvar_usuario(self, entrada_usuario, entrada_senha):
+        """Salva um novo usuário no banco de dados."""
+        usuario = entrada_usuario.get()
+        senha = entrada_senha.get()
+
+        if usuario and senha:
+            with sqlite3.connect("loja_acessorios.db") as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM usuarios WHERE usuario = ?", (usuario,))
+                if cursor.fetchone():
+                    messagebox.showerror("Erro", "Usuário já existe.")
+                else:
+                    cursor.execute("INSERT INTO usuarios (usuario, senha) VALUES (?, ?)", (usuario, senha))
+                    messagebox.showinfo("Sucesso", "Usuário cadastrado com sucesso!")
+                    self.criar_tela_login()
+        else:
+            messagebox.showerror("Erro", "Por favor, preencha todos os campos.")
+
+    def criar_interface_principal(self):
+        """Cria a interface principal após o login."""
+        self.limpar_painel_direita()
         self.adicionar_logo()
         self.criar_botoes()
-        self.janela.mainloop()
 
     def adicionar_logo(self):
         """Adiciona um logo no painel esquerdo."""
         try:
             logo = Image.open("logo.png")
-            logo = logo.resize((200, 200))
+            logo = logo.resize((1, 1))
             logo_tk = ImageTk.PhotoImage(logo)
 
             logo_label = Label(self.painel_esquerdo, image=logo_tk)
@@ -48,8 +163,7 @@ class LojaAcessorios:
         Button(self.painel_esquerdo, text="Adicionar Produto", command=self.adicionar_produto).pack(fill=X, pady=5)
         Button(self.painel_esquerdo, text="Excluir Produto", command=self.excluir_produto).pack(fill=X, pady=5)
         Button(self.painel_esquerdo, text="Importar Produtos", command=self.importar_excel).pack(fill=X, pady=5)
-        Button(self.painel_esquerdo, text="Relatório de Vendas", command=self.gerar_relatorio_vendas).pack(fill=X,
-                                                                                                                 pady=5)
+        Button(self.painel_esquerdo, text="Relatório de Vendas", command=self.gerar_relatorio_vendas).pack(fill=X, pady=5)
         Button(self.painel_esquerdo, text="Consulta Estoque", command=self.listar_produtos).pack(fill=X, pady=5)
 
     def adicionar_produto(self):
@@ -103,7 +217,7 @@ class LojaAcessorios:
                     entrada_nome.delete(0, END)
                     entrada_categoria.delete(0, END)
                     entrada_preco.delete(0, END)
-                    entrada_estoque.delete(0, END())
+                    entrada_estoque.delete(0, END)
         else:
             messagebox.showerror("Erro", "Por favor, preencha todos os campos corretamente.")
 
@@ -283,4 +397,23 @@ class LojaAcessorios:
 
 
 if __name__ == "__main__":
+    # Criar banco de dados e tabelas de usuários e produtos
+    with sqlite3.connect("loja_acessorios.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS usuarios (
+                          id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          usuario TEXT UNIQUE NOT NULL,
+                          senha TEXT NOT NULL)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS produtos (
+                          id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          nome TEXT UNIQUE NOT NULL,
+                          categoria TEXT NOT NULL,
+                          preco REAL NOT NULL,
+                          estoque INTEGER NOT NULL)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS vendas (
+                          id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          produto TEXT NOT NULL,
+                          quantidade INTEGER NOT NULL,
+                          data_venda TEXT NOT NULL)''')
+
     LojaAcessorios()
